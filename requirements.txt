@@ -1,0 +1,9 @@
+# Python dependencies for GRIB2 processing
+# Note: These are installed in Docker, not required for local JS development
+
+# Use pre-built wheels where available
+numpy>=1.24.0,<2.0.0
+Pillow>=10.0.0
+
+# pygrib requires eccodes library (installed via apt in Docker)
+pygrib>=2.1.0

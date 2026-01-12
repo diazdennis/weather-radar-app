@@ -1,0 +1,14 @@
+# Render Blueprint for Weather Radar App
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: weather-radar
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
