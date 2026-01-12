@@ -17,8 +17,8 @@ const CACHE_DURATION = 2 * 60 * 1000;
 // Timeout for MRMS download (60 seconds - increased for Render free tier)
 const DOWNLOAD_TIMEOUT = 60 * 1000;
 
-// Timeout for Python processing (120 seconds - GRIB2 processing can be slow)
-const PYTHON_TIMEOUT = 120 * 1000;
+// Timeout for Python processing (180 seconds - Render free tier is slow)
+const PYTHON_TIMEOUT = 180 * 1000;
 
 /**
  * Default CONUS bounds
@@ -158,8 +158,14 @@ async function runPythonProcessor(): Promise<PythonResult> {
       });
 
       proc.stderr.on('data', (data) => {
-        stderr += data.toString();
-        console.log('Python stderr:', data.toString());
+        const output = data.toString();
+        stderr += output;
+        // Log each line separately for better readability
+        output.split('\n').forEach((line: string) => {
+          if (line.trim()) {
+            console.log('Python:', line);
+          }
+        });
       });
 
       proc.on('error', (error) => {
@@ -176,16 +182,29 @@ async function runPythonProcessor(): Promise<PythonResult> {
       proc.on('close', (code) => {
         clearTimeout(timeoutId);
         
+        console.log(`Python script exited with code ${code}`);
+        console.log(`Python stdout: ${stdout.substring(0, 500)}`);
+        
         if (code === 0) {
           try {
             const result = JSON.parse(stdout.trim());
             console.log('Radar: Python processing complete');
             resolve(result);
           } catch (parseError) {
-            reject(new Error(`Failed to parse Python output: ${stdout}`));
+            reject(new Error(`Failed to parse Python output. stdout: ${stdout.substring(0, 200)}, stderr: ${stderr.substring(0, 200)}`));
           }
         } else {
-          reject(new Error(`Python script exited with code ${code}: ${stderr || stdout}`));
+          // Try to parse stdout for error message first
+          try {
+            const errorResult = JSON.parse(stdout.trim());
+            if (errorResult.error) {
+              reject(new Error(`Python error: ${errorResult.error}`));
+              return;
+            }
+          } catch {
+            // Not valid JSON, use raw output
+          }
+          reject(new Error(`Python script exited with code ${code}. stderr: ${stderr.substring(0, 500) || 'empty'}, stdout: ${stdout.substring(0, 200) || 'empty'}`));
         }
       });
     }
