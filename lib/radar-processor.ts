@@ -241,7 +241,7 @@ export async function fetchLatestRadar(): Promise<RadarResponse> {
     if (cached && await cacheImageExists()) {
       console.log('Radar: Serving from cache');
       return {
-        imageUrl: '/radar/latest.png?' + cached.fetchedAt,
+        imageUrl: '/api/radar/image?' + cached.fetchedAt,
         timestamp: cached.timestamp,
         bounds: cached.bounds,
         gridInfo: cached.gridInfo,
@@ -266,7 +266,7 @@ export async function fetchLatestRadar(): Promise<RadarResponse> {
   console.log('Radar: Fresh data processed successfully');
 
   return {
-    imageUrl: '/radar/latest.png?' + fetchedAt,
+    imageUrl: '/api/radar/image?' + fetchedAt,
     timestamp: result.timestamp || new Date().toISOString(),
     bounds: result.bounds || DEFAULT_BOUNDS,
     gridInfo: result.gridInfo || {
@@ -285,7 +285,7 @@ export async function getRadarData(): Promise<RadarResponse | null> {
   const cached = await getCachedMetadata();
   if (cached && await cacheImageExists()) {
     return {
-      imageUrl: '/radar/latest.png?' + cached.fetchedAt,
+      imageUrl: '/api/radar/image?' + cached.fetchedAt,
       timestamp: cached.timestamp,
       bounds: cached.bounds,
       gridInfo: cached.gridInfo,
