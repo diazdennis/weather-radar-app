@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, ImageOverlay, useMapEvents } from 'react-leaflet';
 import { LatLngBounds as LeafletBounds } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 import { RadarData, ClickInfo, LatLngBounds } from '@/types/radar';
 import { isWithinBounds } from '@/lib/utils';
-import { getDescriptionForDbz, estimateDbzFromColor } from '@/lib/color-scale';
+import { getDescriptionForDbz } from '@/lib/color-scale';
 
 interface RadarMapProps {
   data: RadarData | null;
