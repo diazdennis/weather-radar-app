@@ -138,6 +138,18 @@ def process_grib2(input_file, output_file, downsample_factor=2):
         # Get metadata before loading full data
         valid_date = grb.validDate
         
+        # Check scanning mode to determine data orientation
+        # iScansNegatively: 0 = west to east, 1 = east to west
+        # jScansPositively: 0 = north to south, 1 = south to north
+        try:
+            i_scans_neg = grb['iScansNegatively']
+            j_scans_pos = grb['jScansPositively']
+            print(f"Scanning mode: iScansNegatively={i_scans_neg}, jScansPositively={j_scans_pos}", file=sys.stderr)
+        except Exception as e:
+            print(f"Could not read scanning mode: {e}", file=sys.stderr)
+            i_scans_neg = 0  # Assume west to east
+            j_scans_pos = 1  # Assume south to north
+        
         # Get bounds from message attributes (more memory efficient)
         lat_min = float(grb['latitudeOfFirstGridPointInDegrees'])
         lat_max = float(grb['latitudeOfLastGridPointInDegrees'])
@@ -154,6 +166,17 @@ def process_grib2(input_file, output_file, downsample_factor=2):
         if lon_max > 180:
             lon_max = lon_max - 360.0
             print(f"Normalized lon_max to {lon_max}", file=sys.stderr)
+        
+        # Ensure proper west/east ordering for bounds
+        # After normalization, lon_min should be the western edge (smaller number)
+        if lon_min > lon_max:
+            lon_min, lon_max = lon_max, lon_min
+            print(f"Swapped lon bounds for correct west/east ordering", file=sys.stderr)
+        
+        # Similarly for latitude (south should be smaller)
+        if lat_min > lat_max:
+            lat_min, lat_max = lat_max, lat_min
+            print(f"Swapped lat bounds for correct south/north ordering", file=sys.stderr)
             
         print(f"Final bounds: lat=[{lat_min:.2f}, {lat_max:.2f}], lon=[{lon_min:.2f}, {lon_max:.2f}]", file=sys.stderr)
         
@@ -190,8 +213,18 @@ def process_grib2(input_file, output_file, downsample_factor=2):
         del data
         gc.collect()
         
-        # Flip for correct orientation
-        rgba_data = np.flipud(rgba_data)
+        # Flip for correct orientation based on scanning mode
+        # Vertical flip: if jScansPositively=1 (south to north), we need to flip
+        # because image coordinates have origin at top-left
+        if j_scans_pos == 1:
+            print("Flipping vertically (jScansPositively=1)", file=sys.stderr)
+            rgba_data = np.flipud(rgba_data)
+        
+        # Horizontal flip: if iScansNegatively=1 (east to west), we need to flip
+        # to get west on the left side of the image
+        if i_scans_neg == 1:
+            print("Flipping horizontally (iScansNegatively=1)", file=sys.stderr)
+            rgba_data = np.fliplr(rgba_data)
         
         # Create and save image
         print("Saving PNG image...", file=sys.stderr)
