@@ -17,11 +17,9 @@ interface RadarMapProps {
 // Component to handle map click events
 function ClickHandler({
   bounds,
-  imageUrl,
   onClickInfo,
 }: {
   bounds: LatLngBounds | null;
-  imageUrl: string | null;
   onClickInfo: (info: ClickInfo | null) => void;
 }) {
   useMapEvents({
@@ -39,15 +37,42 @@ function ClickHandler({
         return;
       }
 
-      // For now, we can't read pixel color from the overlay directly in the browser
-      // We'll show the location with a note
-      // In a production app, you'd send the coordinates to the backend to get the value
+      // Show loading state
       onClickInfo({
         lat,
         lng,
         reflectivity: null,
-        description: 'Click on colored area to see precipitation',
+        description: 'Loading...',
       });
+
+      try {
+        // Fetch the actual radar value from the API
+        const response = await fetch(`/api/radar/value?lat=${lat}&lng=${lng}`);
+        if (response.ok) {
+          const data = await response.json();
+          onClickInfo({
+            lat: data.lat,
+            lng: data.lng,
+            reflectivity: data.dbz,
+            description: data.description,
+          });
+        } else {
+          onClickInfo({
+            lat,
+            lng,
+            reflectivity: null,
+            description: 'Unable to read value',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching radar value:', error);
+        onClickInfo({
+          lat,
+          lng,
+          reflectivity: null,
+          description: 'Error reading value',
+        });
+      }
     },
   });
 
@@ -109,7 +134,6 @@ export function RadarMap({ data, onClickInfo }: RadarMapProps) {
       {/* Click handler */}
       <ClickHandler
         bounds={data?.bounds || null}
-        imageUrl={data?.imageUrl || null}
         onClickInfo={onClickInfo}
       />
     </MapContainer>
